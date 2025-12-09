@@ -1,0 +1,610 @@
+:root {
+    --bg-start: #0f172a;
+    --bg-end: #334155;
+    --card-bg: rgba(15, 23, 42, 0.9);
+    --text-main: #f1f5f9;
+    --text-sec: #94a3b8;
+    --accent: #6366f1;
+    --primary: #dc2626;
+    --beam-color: #ef4444;
+    --ground: #1e293b;
+    --gold: #fbbf24;
+    --loss-color: #f87171;
+}
+
+[data-theme="light"] {
+    --bg-start: #38bdf8;
+    --bg-end: #bae6fd;
+    --card-bg: rgba(255, 255, 255, 0.85);
+    --text-main: #1e293b;
+    --text-sec: #475569;
+    --accent: #2563eb;
+    --primary: #ef4444;
+    --beam-color: #dc2626;
+    --ground: #64748b;
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    background: linear-gradient(135deg, var(--bg-start), var(--bg-end));
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    user-select: none;
+    transition: background 0.5s ease;
+}
+/* --- UI & Layout --- */
+
+.container {
+    width: 100%;
+    max-width: 1100px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    padding: 20px;
+    align-items: center;
+}
+
+.view-toggle {
+    position: absolute;
+    /* MODIFIED: Changed top/left to bottom/left */
+    bottom: 40px;
+    left: 40px;
+    top: auto;
+    /* End of Modification */
+    width: 40px;
+    height: 40px;
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 8px;
+    cursor: pointer;
+    z-index: 50;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 1.2rem;
+    transition: all 0.2s;
+}
+
+.view-toggle:hover {
+    background: rgba(255, 255, 255, 0.2);
+    transform: scale(1.1);
+}
+
+body.zen-mode .controls-container {
+    display: none;
+}
+
+body.zen-mode .container {
+    max-width: 100%;
+    padding: 0;
+    height: 100vh;
+}
+
+body.zen-mode .stage {
+    height: 100vh;
+    border-radius: 0;
+    border: none;
+}
+
+body.zen-mode .view-toggle {
+    background: var(--accent);
+}
+/* --- Stage & Environment --- */
+
+.stage {
+    width: 100%;
+    height: 500px;
+    background: linear-gradient(to bottom, transparent, rgba(0, 0, 0, 0.1));
+    border: 2px solid rgba(255, 255, 255, 0.1);
+    border-radius: 20px;
+    position: relative;
+    overflow: hidden;
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.3);
+    perspective: 800px;
+    transform-style: preserve-3d;
+    will-change: transform;
+}
+
+@keyframes stage-shake {
+    0% {
+        transform: translate(0, 0);
+    }
+    25% {
+        transform: translate(-4px, 4px);
+    }
+    50% {
+        transform: translate(4px, -2px);
+    }
+    75% {
+        transform: translate(-2px, 2px);
+    }
+    100% {
+        transform: translate(0, 0);
+    }
+}
+
+.shaking {
+    animation: stage-shake 0.2s cubic-bezier(.36, .07, .19, .97) both;
+}
+
+.skyline {
+    position: absolute;
+    bottom: 80px;
+    width: 100%;
+    height: 200px;
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-around;
+    opacity: 0.6;
+    pointer-events: none;
+    transform: translateZ(-100px);
+}
+
+.building {
+    background: var(--ground);
+    width: 60px;
+    transition: background 0.5s;
+}
+
+.b1 {
+    height: 100px;
+}
+
+.b2 {
+    height: 180px;
+    width: 80px;
+}
+
+.b3 {
+    height: 140px;
+}
+
+.ground {
+    position: absolute;
+    bottom: -50px;
+    left: -10%;
+    width: 120%;
+    height: 200px;
+    background: var(--ground);
+    transform-origin: top;
+    transform: rotateX(60deg);
+    border-top: 4px solid rgba(255, 255, 255, 0.1);
+    transition: background 0.5s;
+    z-index: 2;
+    background-image: linear-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1px), linear-gradient(90deg, rgba(255, 255, 255, 0.05) 1px, transparent 1px);
+    background-size: 50px 50px;
+    background-position: center bottom;
+}
+/* --- Entities --- */
+
+.projectile,
+.particle,
+.enemy,
+.muzzle-flash {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    will-change: transform;
+}
+
+.projectile {
+    width: 40px;
+    height: 10px;
+    background: var(--beam-color);
+    border-radius: 10px;
+    box-shadow: 0 0 15px var(--beam-color), 0 0 30px white;
+    z-index: 9;
+    pointer-events: none;
+}
+
+.particle {
+    background: rgba(255, 255, 255, 0.5);
+    border-radius: 50%;
+    pointer-events: none;
+    z-index: 20;
+}
+
+.enemy {
+    width: 40px;
+    height: 40px;
+    background: rgba(255, 255, 255, 0.1);
+    border: 2px solid #ef4444;
+    box-shadow: 0 0 10px #ef4444;
+    z-index: 8;
+}
+
+.enemy-inner {
+    width: 100%;
+    height: 100%;
+    transform: rotate(45deg);
+}
+
+.enemy-inner::after {
+    content: '';
+    position: absolute;
+    top: 25%;
+    left: 25%;
+    width: 50%;
+    height: 50%;
+    background: #ef4444;
+    border-radius: 50%;
+    animation: pulse 1s infinite;
+}
+
+.muzzle-flash {
+    width: 20px;
+    height: 20px;
+    background: white;
+    border-radius: 50%;
+    box-shadow: 0 0 20px white, 0 0 40px var(--beam-color);
+    z-index: 15;
+    opacity: 0;
+    transition: opacity 0.05s;
+}
+
+.muzzle-flash.active {
+    opacity: 1;
+}
+
+@keyframes pulse {
+    0% {
+        opacity: 0.5;
+        transform: scale(0.8);
+    }
+    50% {
+        opacity: 1;
+        transform: scale(1.2);
+    }
+    100% {
+        opacity: 0.5;
+        transform: scale(0.8);
+    }
+}
+
+.celestial {
+    position: absolute;
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    top: 40px;
+    right: 60px;
+    cursor: pointer;
+    transition: transform 0.8s, background 0.5s;
+    z-index: 5;
+}
+
+.moon {
+    background: radial-gradient(circle, #fbbf24, #d97706);
+    box-shadow: 0 0 30px rgba(251, 191, 36, 0.4);
+}
+
+.sun {
+    background: radial-gradient(circle, #fef08a, #facc15);
+    box-shadow: 0 0 60px rgba(253, 224, 71, 0.8);
+    transform: scale(1.2) translate(-20px, 10px);
+}
+/* --- Win/Loss Screen --- */
+
+.result-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.7);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 1s ease;
+}
+
+.result-overlay.active {
+    opacity: 1;
+    pointer-events: all;
+}
+
+.result-text {
+    font-size: 5rem;
+    font-weight: 900;
+    text-transform: uppercase;
+    transform: scale(0.5);
+    animation: popIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+}
+
+.win-text {
+    color: var(--gold);
+    text-shadow: 0 0 20px var(--primary), 0 0 40px var(--gold);
+}
+
+.loss-text {
+    color: var(--loss-color);
+    text-shadow: 0 0 20px black, 0 0 40px var(--loss-color);
+}
+
+.result-subtext {
+    color: white;
+    font-size: 1.5rem;
+    margin-top: 20px;
+}
+
+@keyframes popIn {
+    to {
+        transform: scale(1);
+    }
+}
+/* --- Hero --- */
+
+#hero-container {
+    position: absolute;
+    left: 0;
+    bottom: 0;
+    width: 140px;
+    height: 200px;
+    transform-origin: center center;
+    will-change: transform;
+    z-index: 10;
+    transform-style: preserve-3d;
+    transition: filter 0.2s;
+}
+
+#cape {
+    transition: transform 0.3s ease-out;
+    transform-origin: top center;
+}
+
+.flying-mode #cape {
+    transform: scaleX(1.8) rotate(-10deg) translateY(-10px);
+}
+
+.flying-mode #left-leg {
+    transform: rotate(15deg);
+}
+
+.flying-mode #right-leg {
+    transform: rotate(-15deg);
+}
+
+@keyframes hoverFloat {
+    0%,
+    100% {
+        transform: translateY(0);
+    }
+    50% {
+        transform: translateY(-10px);
+    }
+}
+
+.idle:not(.flying-mode) #hero-container {
+    animation: hoverFloat 3s ease-in-out infinite;
+}
+
+.firing #eyes ellipse {
+    fill: #fff;
+    filter: drop-shadow(0 0 8px var(--beam-color));
+}
+/* --- HUD & Controls --- */
+/* NEW: HUD styling inside the stage */
+
+.game-hud {
+    position: absolute;
+    top: 20px;
+    left: 20px;
+    z-index: 50;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.score-box {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 1.2rem;
+    color: var(--gold);
+    font-weight: bold;
+    background: rgba(0, 0, 0, 0.5);
+    /* Darker background for visibility in stage */
+    padding: 8px 16px;
+    border-radius: 8px;
+    border: 1px solid rgba(251, 191, 36, 0.5);
+    backdrop-filter: blur(5px);
+}
+
+.float-text {
+    position: absolute;
+    font-weight: bold;
+    font-size: 1.2rem;
+    pointer-events: none;
+    animation: floatUp 1s forwards;
+    z-index: 50;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+    bottom: 0;
+    left: 0;
+    color: var(--gold);
+}
+
+.float-text.loss {
+    color: var(--loss-color);
+    font-size: 1.4rem;
+}
+
+@keyframes floatUp {
+    0% {
+        transform: translate3d(0, 0, 0) scale(1);
+        opacity: 1;
+    }
+    100% {
+        transform: translate3d(0, -50px, 0) scale(1.5);
+        opacity: 0;
+    }
+}
+/* NEW: Control container layout */
+
+.controls-container {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    width: 100%;
+}
+
+.actions-controls {
+    display: flex;
+    gap: 15px;
+    background: var(--card-bg);
+    padding: 20px;
+    border-radius: 16px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(10px);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+    justify-content: space-around;
+    flex-wrap: wrap;
+}
+
+.transform-controls {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 15px;
+    background: var(--card-bg);
+    padding: 20px;
+    border-radius: 16px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(10px);
+}
+
+.control-group {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.control-group h3 {
+    color: var(--text-main);
+    margin-bottom: 5px;
+    font-size: 1.1em;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.control-group h3::before {
+    content: '';
+    width: 4px;
+    height: 16px;
+    background: var(--accent);
+    border-radius: 2px;
+}
+
+.btn {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: var(--text-main);
+    padding: 12px 24px;
+    border-radius: 8px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.btn:hover {
+    background: rgba(255, 255, 255, 0.15);
+    transform: translateY(-2px);
+}
+
+.btn:active {
+    transform: scale(0.95);
+}
+
+.btn-primary {
+    background: var(--primary);
+    color: white;
+    border: none;
+}
+
+.btn-toggle.active {
+    background: var(--accent);
+    color: white;
+    box-shadow: 0 0 15px rgba(99, 102, 241, 0.5);
+}
+
+.slider-container {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.slider-label {
+    display: flex;
+    justify-content: space-between;
+    color: var(--text-sec);
+    font-size: 0.9rem;
+}
+
+.slider-value {
+    background: var(--accent);
+    color: white;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-size: 0.8rem;
+    font-weight: bold;
+}
+
+input[type="range"] {
+    width: 100%;
+    height: 6px;
+    border-radius: 3px;
+    background: rgba(255, 255, 255, 0.1);
+    outline: none;
+    -webkit-appearance: none;
+}
+
+input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: var(--accent);
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.keys-hint {
+    color: var(--text-sec);
+    font-size: 0.9rem;
+    text-align: center;
+    margin-top: 10px;
+}
+
+kbd {
+    background: rgba(0, 0, 0, 0.3);
+    padding: 2px 6px;
+    border-radius: 4px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    font-family: monospace;
+}
+
+@media (max-width: 768px) {
+    .transform-controls {
+        grid-template-columns: 1fr;
+    }
+    .controls-container {
+        gap: 10px;
+    }
+    .actions-controls {
+        justify-content: center;
+    }
+}
