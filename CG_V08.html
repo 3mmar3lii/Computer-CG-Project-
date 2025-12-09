@@ -1,0 +1,1395 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Super Shadow Studio - Final Evolution</title>
+    <style>
+         :root {
+            --bg-start: #0f172a;
+            --bg-end: #334155;
+            --card-bg: rgba(15, 23, 42, 0.9);
+            --text-main: #f1f5f9;
+            --text-sec: #94a3b8;
+            --accent: #6366f1;
+            --primary: #dc2626;
+            --beam-color: #ef4444;
+            --ground: #1e293b;
+            --gold: #fbbf24;
+            --loss-color: #f87171;
+        }
+        
+        [data-theme="light"] {
+            --bg-start: #38bdf8;
+            --bg-end: #bae6fd;
+            --card-bg: rgba(255, 255, 255, 0.85);
+            --text-main: #1e293b;
+            --text-sec: #475569;
+            --accent: #2563eb;
+            --primary: #ef4444;
+            --beam-color: #dc2626;
+            --ground: #64748b;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            background: linear-gradient(135deg, var(--bg-start), var(--bg-end));
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            user-select: none;
+            transition: background 0.5s ease;
+        }
+        /* --- UI & Layout --- */
+        
+        .container {
+            width: 100%;
+            max-width: 1100px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            padding: 20px;
+            align-items: center;
+        }
+        
+        .view-toggle {
+            position: absolute;
+            /* MODIFIED: Changed top/left to bottom/left */
+            bottom: 40px;
+            left: 40px;
+            top: auto;
+            /* End of Modification */
+            width: 40px;
+            height: 40px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 8px;
+            cursor: pointer;
+            z-index: 50;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 1.2rem;
+            transition: all 0.2s;
+        }
+        
+        .view-toggle:hover {
+            background: rgba(255, 255, 255, 0.2);
+            transform: scale(1.1);
+        }
+        
+        body.zen-mode .controls-container {
+            display: none;
+        }
+        
+        body.zen-mode .container {
+            max-width: 100%;
+            padding: 0;
+            height: 100vh;
+        }
+        
+        body.zen-mode .stage {
+            height: 100vh;
+            border-radius: 0;
+            border: none;
+        }
+        
+        body.zen-mode .view-toggle {
+            background: var(--accent);
+        }
+        /* --- Stage & Environment --- */
+        
+        .stage {
+            width: 100%;
+            height: 500px;
+            background: linear-gradient(to bottom, transparent, rgba(0, 0, 0, 0.1));
+            border: 2px solid rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.3);
+            perspective: 800px;
+            transform-style: preserve-3d;
+            will-change: transform;
+        }
+        
+        @keyframes stage-shake {
+            0% {
+                transform: translate(0, 0);
+            }
+            25% {
+                transform: translate(-4px, 4px);
+            }
+            50% {
+                transform: translate(4px, -2px);
+            }
+            75% {
+                transform: translate(-2px, 2px);
+            }
+            100% {
+                transform: translate(0, 0);
+            }
+        }
+        
+        .shaking {
+            animation: stage-shake 0.2s cubic-bezier(.36, .07, .19, .97) both;
+        }
+        
+        .skyline {
+            position: absolute;
+            bottom: 80px;
+            width: 100%;
+            height: 200px;
+            display: flex;
+            align-items: flex-end;
+            justify-content: space-around;
+            opacity: 0.6;
+            pointer-events: none;
+            transform: translateZ(-100px);
+        }
+        
+        .building {
+            background: var(--ground);
+            width: 60px;
+            transition: background 0.5s;
+        }
+        
+        .b1 {
+            height: 100px;
+        }
+        
+        .b2 {
+            height: 180px;
+            width: 80px;
+        }
+        
+        .b3 {
+            height: 140px;
+        }
+        
+        .ground {
+            position: absolute;
+            bottom: -50px;
+            left: -10%;
+            width: 120%;
+            height: 200px;
+            background: var(--ground);
+            transform-origin: top;
+            transform: rotateX(60deg);
+            border-top: 4px solid rgba(255, 255, 255, 0.1);
+            transition: background 0.5s;
+            z-index: 2;
+            background-image: linear-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1px), linear-gradient(90deg, rgba(255, 255, 255, 0.05) 1px, transparent 1px);
+            background-size: 50px 50px;
+            background-position: center bottom;
+        }
+        /* --- Entities --- */
+        
+        .projectile,
+        .particle,
+        .enemy,
+        .muzzle-flash {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            will-change: transform;
+        }
+        
+        .projectile {
+            width: 40px;
+            height: 10px;
+            background: var(--beam-color);
+            border-radius: 10px;
+            box-shadow: 0 0 15px var(--beam-color), 0 0 30px white;
+            z-index: 9;
+            pointer-events: none;
+        }
+        
+        .particle {
+            background: rgba(255, 255, 255, 0.5);
+            border-radius: 50%;
+            pointer-events: none;
+            z-index: 20;
+        }
+        
+        .enemy {
+            width: 40px;
+            height: 40px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 2px solid #ef4444;
+            box-shadow: 0 0 10px #ef4444;
+            z-index: 8;
+        }
+        
+        .enemy-inner {
+            width: 100%;
+            height: 100%;
+            transform: rotate(45deg);
+        }
+        
+        .enemy-inner::after {
+            content: '';
+            position: absolute;
+            top: 25%;
+            left: 25%;
+            width: 50%;
+            height: 50%;
+            background: #ef4444;
+            border-radius: 50%;
+            animation: pulse 1s infinite;
+        }
+        
+        .muzzle-flash {
+            width: 20px;
+            height: 20px;
+            background: white;
+            border-radius: 50%;
+            box-shadow: 0 0 20px white, 0 0 40px var(--beam-color);
+            z-index: 15;
+            opacity: 0;
+            transition: opacity 0.05s;
+        }
+        
+        .muzzle-flash.active {
+            opacity: 1;
+        }
+        
+        @keyframes pulse {
+            0% {
+                opacity: 0.5;
+                transform: scale(0.8);
+            }
+            50% {
+                opacity: 1;
+                transform: scale(1.2);
+            }
+            100% {
+                opacity: 0.5;
+                transform: scale(0.8);
+            }
+        }
+        
+        .celestial {
+            position: absolute;
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            top: 40px;
+            right: 60px;
+            cursor: pointer;
+            transition: transform 0.8s, background 0.5s;
+            z-index: 5;
+        }
+        
+        .moon {
+            background: radial-gradient(circle, #fbbf24, #d97706);
+            box-shadow: 0 0 30px rgba(251, 191, 36, 0.4);
+        }
+        
+        .sun {
+            background: radial-gradient(circle, #fef08a, #facc15);
+            box-shadow: 0 0 60px rgba(253, 224, 71, 0.8);
+            transform: scale(1.2) translate(-20px, 10px);
+        }
+        /* --- Win/Loss Screen --- */
+        
+        .result-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 1s ease;
+        }
+        
+        .result-overlay.active {
+            opacity: 1;
+            pointer-events: all;
+        }
+        
+        .result-text {
+            font-size: 5rem;
+            font-weight: 900;
+            text-transform: uppercase;
+            transform: scale(0.5);
+            animation: popIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+        }
+        
+        .win-text {
+            color: var(--gold);
+            text-shadow: 0 0 20px var(--primary), 0 0 40px var(--gold);
+        }
+        
+        .loss-text {
+            color: var(--loss-color);
+            text-shadow: 0 0 20px black, 0 0 40px var(--loss-color);
+        }
+        
+        .result-subtext {
+            color: white;
+            font-size: 1.5rem;
+            margin-top: 20px;
+        }
+        
+        @keyframes popIn {
+            to {
+                transform: scale(1);
+            }
+        }
+        /* --- Hero --- */
+        
+        #hero-container {
+            position: absolute;
+            left: 0;
+            bottom: 0;
+            width: 140px;
+            height: 200px;
+            transform-origin: center center;
+            will-change: transform;
+            z-index: 10;
+            transform-style: preserve-3d;
+            transition: filter 0.2s;
+        }
+        
+        #cape {
+            transition: transform 0.3s ease-out;
+            transform-origin: top center;
+        }
+        
+        .flying-mode #cape {
+            transform: scaleX(1.8) rotate(-10deg) translateY(-10px);
+        }
+        
+        .flying-mode #left-leg {
+            transform: rotate(15deg);
+        }
+        
+        .flying-mode #right-leg {
+            transform: rotate(-15deg);
+        }
+        
+        @keyframes hoverFloat {
+            0%,
+            100% {
+                transform: translateY(0);
+            }
+            50% {
+                transform: translateY(-10px);
+            }
+        }
+        
+        .idle:not(.flying-mode) #hero-container {
+            animation: hoverFloat 3s ease-in-out infinite;
+        }
+        
+        .firing #eyes ellipse {
+            fill: #fff;
+            filter: drop-shadow(0 0 8px var(--beam-color));
+        }
+        /* --- HUD & Controls --- */
+        /* NEW: HUD styling inside the stage */
+        
+        .game-hud {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            z-index: 50;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        
+        .score-box {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 1.2rem;
+            color: var(--gold);
+            font-weight: bold;
+            background: rgba(0, 0, 0, 0.5);
+            /* Darker background for visibility in stage */
+            padding: 8px 16px;
+            border-radius: 8px;
+            border: 1px solid rgba(251, 191, 36, 0.5);
+            backdrop-filter: blur(5px);
+        }
+        
+        .float-text {
+            position: absolute;
+            font-weight: bold;
+            font-size: 1.2rem;
+            pointer-events: none;
+            animation: floatUp 1s forwards;
+            z-index: 50;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+            bottom: 0;
+            left: 0;
+            color: var(--gold);
+        }
+        
+        .float-text.loss {
+            color: var(--loss-color);
+            font-size: 1.4rem;
+        }
+        
+        @keyframes floatUp {
+            0% {
+                transform: translate3d(0, 0, 0) scale(1);
+                opacity: 1;
+            }
+            100% {
+                transform: translate3d(0, -50px, 0) scale(1.5);
+                opacity: 0;
+            }
+        }
+        /* NEW: Control container layout */
+        
+        .controls-container {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            width: 100%;
+        }
+        
+        .actions-controls {
+            display: flex;
+            gap: 15px;
+            background: var(--card-bg);
+            padding: 20px;
+            border-radius: 16px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            justify-content: space-around;
+            flex-wrap: wrap;
+        }
+        
+        .transform-controls {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 15px;
+            background: var(--card-bg);
+            padding: 20px;
+            border-radius: 16px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+        }
+        
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        
+        .control-group h3 {
+            color: var(--text-main);
+            margin-bottom: 5px;
+            font-size: 1.1em;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .control-group h3::before {
+            content: '';
+            width: 4px;
+            height: 16px;
+            background: var(--accent);
+            border-radius: 2px;
+        }
+        
+        .btn {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: var(--text-main);
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .btn:hover {
+            background: rgba(255, 255, 255, 0.15);
+            transform: translateY(-2px);
+        }
+        
+        .btn:active {
+            transform: scale(0.95);
+        }
+        
+        .btn-primary {
+            background: var(--primary);
+            color: white;
+            border: none;
+        }
+        
+        .btn-toggle.active {
+            background: var(--accent);
+            color: white;
+            box-shadow: 0 0 15px rgba(99, 102, 241, 0.5);
+        }
+        
+        .slider-container {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+        
+        .slider-label {
+            display: flex;
+            justify-content: space-between;
+            color: var(--text-sec);
+            font-size: 0.9rem;
+        }
+        
+        .slider-value {
+            background: var(--accent);
+            color: white;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-size: 0.8rem;
+            font-weight: bold;
+        }
+        
+        input[type="range"] {
+            width: 100%;
+            height: 6px;
+            border-radius: 3px;
+            background: rgba(255, 255, 255, 0.1);
+            outline: none;
+            -webkit-appearance: none;
+        }
+        
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: var(--accent);
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .keys-hint {
+            color: var(--text-sec);
+            font-size: 0.9rem;
+            text-align: center;
+            margin-top: 10px;
+        }
+        
+        kbd {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 2px 6px;
+            border-radius: 4px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            font-family: monospace;
+        }
+        
+        @media (max-width: 768px) {
+            .transform-controls {
+                grid-template-columns: 1fr;
+            }
+            .controls-container {
+                gap: 10px;
+            }
+            .actions-controls {
+                justify-content: center;
+            }
+        }
+    </style>
+</head>
+
+<body data-theme="dark">
+
+    <div class="container">
+        <div class="stage" id="gameStage">
+            <div class="view-toggle" onclick="toggleView()" title="Toggle Zen Mode">⛶</div>
+
+            <div id="themeToggle" class="celestial moon" onclick="toggleTheme()" title="Toggle Day/Night"></div>
+
+            <div class="game-hud">
+                <div class="score-box"><span>Health:</span><span id="healthValue">3 ❤️</span></div>
+                <div class="score-box"><span>💀 Killed:</span><span id="killValue">0</span></div>
+            </div>
+
+            <div id="resultOverlay" class="result-overlay">
+                <div class="result-text" id="resultText"></div>
+                <div class="result-subtext" id="resultSubtext"></div>
+                <button class="btn btn-primary" style="margin-top:30px;" onclick="resetGame()">Play Again</button>
+            </div>
+
+            <div class="skyline">
+                <div class="building b1"></div>
+                <div class="building b2"></div>
+                <div class="building b3"></div>
+                <div class="building b1"></div>
+            </div>
+
+            <div id="muzzleFlash" class="muzzle-flash"></div>
+
+            <div id="char-shadow" style="width: 80px; height: 10px; background: rgba(0,0,0,0.5); border-radius: 50%; position: absolute; bottom: 75px; left: 0; filter: blur(4px); pointer-events: none; transition: opacity 0.2s; will-change: transform;"></div>
+
+            <div id="hero-container" class="idle">
+                <svg width="140" height="200" viewBox="0 0 200 300" xmlns="http://www.w3.org/2000/svg">
+                    <g id="cape"><path d="M 50 120 Q 30 160 40 220 L 60 240 Q 80 200 100 200 Q 120 200 140 240 L 160 220 Q 170 160 150 120 Z" fill="#0f172a" stroke="#334155" stroke-width="2"/></g>
+                    <g id="head" transform-origin="100 70">
+                        <path d="M 60 50 Q 60 30 100 30 Q 140 30 140 50 L 135 80 Q 130 90 100 90 Q 70 90 65 80 Z" fill="#1f2937" stroke="#334155" stroke-width="2"/>
+                        <g id="eyes">
+                            <ellipse cx="80" cy="60" rx="12" ry="15" fill="#e2e8f0" stroke="#334155" stroke-width="1.5"/>
+                            <ellipse cx="120" cy="60" rx="12" ry="15" fill="#e2e8f0" stroke="#334155" stroke-width="1.5"/>
+                        </g>
+                    </g>
+                    <g id="torso">
+                        <rect x="70" y="100" width="60" height="80" rx="10" fill="#1f2937" stroke="#334155" stroke-width="2"/>
+                        <path d="M 100 120 L 90 130 L 100 145 L 110 130 Z" fill="var(--primary)" stroke="#991b1b" stroke-width="1.5"/>
+                        <rect x="70" y="160" width="60" height="10" fill="#0f172a"/>
+                        <rect x="95" y="162" width="10" height="6" fill="var(--primary)"/>
+                    </g>
+                    <g id="left-arm" transform-origin="60 110"><rect x="45" y="110" width="20" height="50" rx="8" fill="#1f2937" stroke="#334155" stroke-width="2"/><rect x="50" y="155" width="10" height="15" fill="#0f172a"/></g>
+                    <g id="right-arm" transform-origin="140 110"><rect x="135" y="110" width="20" height="50" rx="8" fill="#1f2937" stroke="#334155" stroke-width="2"/><rect x="140" y="155" width="10" height="15" fill="#0f172a"/></g>
+                    <g id="left-leg" transform-origin="80 180"><rect x="72" y="180" width="16" height="40" rx="6" fill="#1f2937" stroke="#334155" stroke-width="2"/><rect x="112" y="180" width="16" height="40" rx="6" fill="#1f2937" stroke="#334155" stroke-width="2"/></g>
+                    <g id="right-leg" transform-origin="120 180"><rect x="112" y="180" width="16" height="40" rx="6" fill="#1f2937" stroke="#334155" stroke-width="2"/></g>
+                </svg>
+            </div>
+
+            <div class="ground"></div>
+        </div>
+
+        <div class="controls-container">
+            <div class="actions-controls">
+                <button class="btn btn-toggle" id="fightBtn" onclick="toggleFightMode()">⚔️ Fight Mode</button>
+                <button class="btn btn-toggle" id="flyBtn" onclick="toggleFlight()">🚀 Flight Mode</button>
+                <button class="btn btn-primary" onclick="shootProjectile()">🔥 Shoot</button>
+                <button class="btn" onclick="resetGame()">↺ Reset Game</button>
+                <button class="btn" onclick="resetTransform()">↺ Reset Transform</button>
+            </div>
+
+            <div class="transform-controls">
+                <div class="control-group">
+                    <h3>Body Parts</h3>
+                    <div class="slider-container">
+                        <div class="slider-label"><span>Head</span><span class="slider-value" id="headValue">0°</span></div><input type="range" id="headRotation" min="-45" max="45" value="0" oninput="rotatePart('head', this.value)"></div>
+                    <div class="slider-container">
+                        <div class="slider-label"><span>Left Arm</span><span class="slider-value" id="leftArmValue">0°</span></div><input type="range" id="leftArmRotation" min="-180" max="180" value="0" oninput="rotatePart('left-arm', this.value)"></div>
+                    <div class="slider-container">
+                        <div class="slider-label"><span>Right Arm</span><span class="slider-value" id="rightArmValue">0°</span></div><input type="range" id="rightArmRotation" min="-180" max="180" value="0" oninput="rotatePart('right-arm', this.value)"></div>
+                </div>
+                <div class="control-group">
+                    <h3>Transform</h3>
+                    <div class="slider-container">
+                        <div class="slider-label"><span>Scale</span><span class="slider-value" id="scaleValue">100%</span></div><input type="range" id="scale" min="50" max="200" value="100" oninput="updateTransform()"></div>
+
+                    <div class="slider-container">
+                        <div class="slider-label"><span>Rotate</span><span class="slider-value" id="rotateValue">0°</span></div><input type="range" id="rotate" min="-180" max="180" value="0" oninput="updateTransform()"></div>
+
+                    <div class="slider-container">
+                        <div class="slider-label"><span>Skew X</span><span class="slider-value" id="skewXValue">0°</span></div><input type="range" id="skewX" min="-30" max="30" value="0" oninput="updateTransform()"></div>
+                    <div class="slider-container">
+                        <div class="slider-label"><span>Skew Y</span><span class="slider-value" id="skewYValue">0°</span></div><input type="range" id="skewY" min="-30" max="30" value="0" oninput="updateTransform()"></div>
+                </div>
+            </div>
+            <div class="keys-hint"><kbd>Arrows</kbd> Move &nbsp;|&nbsp; <kbd>Space/↑</kbd> Fly &nbsp;|&nbsp; <kbd>F</kbd> Shoot &nbsp;|&nbsp; <kbd>Shift</kbd> Turbo</div>
+        </div>
+    </div>
+
+    <script>
+        /* --- CONSTANTS & CONFIG --- */
+        const DOM = {
+            stage: document.getElementById('gameStage'),
+            hero: document.getElementById('hero-container'),
+            shadow: document.getElementById('char-shadow'),
+            flyBtn: document.getElementById('flyBtn'),
+            fightBtn: document.getElementById('fightBtn'),
+            health: document.getElementById('healthValue'),
+            kills: document.getElementById('killValue'),
+            muzzle: document.getElementById('muzzleFlash'),
+            resultOverlay: document.getElementById('resultOverlay'),
+            resultText: document.getElementById('resultText'),
+            resultSubtext: document.getElementById('resultSubtext'),
+            scaleInput: document.getElementById('scale'),
+            scaleLabel: document.getElementById('scaleValue')
+        };
+
+        const CFG = {
+            SPEED: 2.5,
+            TURBO: 4.0,
+            FRICTION: 0.75,
+            GRAVITY: 0.8,
+            FLY_SPEED: 3.0,
+            LASER_Y_OFFSET: 220,
+            GROUND_OFFSET: 80,
+            COLLISION_DAMAGE_HEALTH: 1,
+            KILL_SCORE_AMOUNT: 10,
+            SCALE_LOSS_PERCENT: 5,
+            VICTORY_ROTATION_RATE: 360
+        };
+
+        const state = {
+            x: 50, // %
+            y: 0, // px
+            vx: 0,
+            vy: 0,
+            isFlying: false,
+            fightMode: false,
+            facingRight: true,
+            theme: 'dark',
+            health: 3,
+            kills: 0,
+            scale: 100,
+            manualRotation: 0,
+            skewX: 0,
+            skewY: 0,
+            rotations: {
+                head: 0,
+                'left-arm': 0,
+                'right-arm': 0
+            },
+            hasEnded: false,
+            victoryRotation: 0
+        };
+
+        const keys = {
+            ArrowRight: false,
+            ArrowLeft: false,
+            ArrowUp: false,
+            ArrowDown: false,
+            Shift: false
+        };
+
+        const projectiles = [];
+        const particles = [];
+        const enemies = [];
+        const particlePool = [];
+        const MAX_PARTICLES = 100;
+
+        let lastTime = 0;
+
+        /* --- INITIALIZATION --- */
+        function init() {
+            if (!DOM.stage) return;
+
+            window.addEventListener('keydown', handleKeyDown);
+            window.addEventListener('keyup', handleKeyUp);
+
+            for (let i = 0; i < MAX_PARTICLES; i++) {
+                const p = document.createElement('div');
+                p.className = 'particle';
+                p.style.display = 'none';
+                DOM.stage.appendChild(p);
+                particlePool.push({
+                    el: p,
+                    active: false
+                });
+            }
+            updateHealthDisplay();
+
+            requestAnimationFrame(gameLoop);
+            setInterval(spawnEnemy, 2000);
+        }
+
+        /* --- UI UPDATES --- */
+        function updateHealthDisplay() {
+            DOM.health.textContent = `${state.health} ${'❤️'.repeat(Math.max(0, state.health))}`;
+        }
+
+        /* --- INPUT HANDLING --- */
+        function handleKeyDown(e) {
+            if (state.hasEnded) return;
+
+            if (e.code === 'Space') {
+                e.preventDefault();
+                if (!state.isFlying) toggleFlight();
+            }
+            if (e.code === 'KeyF') shootProjectile();
+            if (e.key === 'Shift') keys.Shift = true;
+            if (keys.hasOwnProperty(e.code)) keys[e.code] = true;
+        }
+
+        function handleKeyUp(e) {
+            if (e.key === 'Shift') keys.Shift = false;
+            if (keys.hasOwnProperty(e.code)) keys[e.code] = false;
+        }
+
+        /* --- ACTIONS --- */
+        function toggleView() {
+            document.body.classList.toggle('zen-mode');
+            window.dispatchEvent(new Event('resize'));
+        }
+
+        function toggleTheme() {
+            state.theme = state.theme === 'dark' ? 'light' : 'dark';
+            document.body.setAttribute('data-theme', state.theme);
+            document.getElementById('themeToggle').className = `celestial ${state.theme === 'light' ? 'sun' : 'moon'}`;
+        }
+
+        function toggleFightMode() {
+            if (state.hasEnded) return;
+
+            state.fightMode = !state.fightMode;
+            DOM.fightBtn.classList.toggle('active', state.fightMode);
+            if (state.fightMode) {
+                spawnParticles(5, 'spark', (state.x / 100) * DOM.stage.offsetWidth, state.y + 100);
+            }
+        }
+
+        function toggleFlight() {
+            if (state.hasEnded) return;
+
+            state.isFlying = !state.isFlying;
+            DOM.hero.classList.toggle('flying-mode', state.isFlying);
+            DOM.hero.classList.toggle('idle', !state.isFlying);
+            DOM.flyBtn.classList.toggle('active', state.isFlying);
+
+            if (state.isFlying) {
+                state.vy = 12;
+                spawnParticles(10, 'cloud');
+            }
+        }
+
+        function shootProjectile() {
+            if (state.hasEnded) return;
+
+            DOM.hero.classList.add('firing');
+            setTimeout(() => DOM.hero.classList.remove('firing'), 100);
+
+            triggerShake();
+
+            const stageWidth = DOM.stage.offsetWidth;
+            const heroX = (state.x / 100) * stageWidth;
+            const heroY = state.y + CFG.LASER_Y_OFFSET * (state.scale / 100);
+
+            const muzzleOffset = state.facingRight ? 30 * (state.scale / 100) : -30 * (state.scale / 100);
+            DOM.muzzle.style.transform = `translate3d(${heroX + muzzleOffset}px, -${heroY}px, 0)`;
+            DOM.muzzle.classList.add('active');
+            setTimeout(() => DOM.muzzle.classList.remove('active'), 50);
+
+            const recoilForce = state.isFlying ? 1 : 2;
+            state.vx += state.facingRight ? -recoilForce : recoilForce;
+
+            const p = document.createElement('div');
+            p.className = 'projectile';
+            DOM.stage.appendChild(p);
+
+            const direction = state.facingRight ? 1 : -1;
+
+            projectiles.push({
+                el: p,
+                x: heroX,
+                y: heroY,
+                vx: 30 * direction,
+                life: 100
+            });
+        }
+
+        function triggerShake() {
+            DOM.stage.classList.remove('shaking');
+            void DOM.stage.offsetWidth;
+            DOM.stage.classList.add('shaking');
+        }
+
+        function addCoin(x, y, amount = CFG.KILL_SCORE_AMOUNT) {
+            const popup = document.createElement('div');
+            popup.className = 'float-text';
+            popup.textContent = `+${amount}`;
+            popup.style.left = x + 'px';
+            popup.style.bottom = (y + 80) + 'px';
+
+            DOM.stage.appendChild(popup);
+            setTimeout(() => popup.remove(), 1000);
+        }
+
+        function takeDamage(x, y) {
+            if (state.hasEnded) return;
+
+            state.health = Math.max(0, state.health - CFG.COLLISION_DAMAGE_HEALTH);
+            damageHero(CFG.SCALE_LOSS_PERCENT); // Shrink visual power
+            updateHealthDisplay();
+
+            const popup = document.createElement('div');
+            popup.className = 'float-text loss';
+            popup.textContent = `-1 ❤️`;
+            popup.style.left = x + 'px';
+            popup.style.bottom = (y + 80) + 'px';
+
+            DOM.stage.appendChild(popup);
+            setTimeout(() => popup.remove(), 1000);
+
+            if (state.health <= 0) {
+                triggerLoss();
+            }
+        }
+
+        /* --- SPAWNERS --- */
+        function spawnParticles(count, type, x, y) {
+            const stageWidth = DOM.stage.offsetWidth;
+            const originX = x !== undefined ? x : (state.x / 100) * stageWidth;
+            const originY = y !== undefined ? y : state.y + 10;
+
+            let spawned = 0;
+            for (let i = 0; i < particlePool.length; i++) {
+                if (spawned >= count) break;
+                if (!particlePool[i].active) {
+                    const p = particlePool[i];
+                    p.active = true;
+                    p.el.style.display = 'block';
+
+                    const size = Math.random() * 8 + 4;
+                    p.el.style.width = size + 'px';
+                    p.el.style.height = size + 'px';
+                    p.el.style.backgroundColor = type === 'spark' ? getComputedStyle(document.body).getPropertyValue('--beam-color') : 'rgba(255,255,255,0.5)';
+
+                    p.x = originX + (Math.random() * 40 - 20);
+                    p.y = originY;
+
+                    if (type === 'spark') {
+                        const angle = Math.random() * Math.PI * 2;
+                        const speed = Math.random() * 5 + 2;
+                        p.vx = Math.cos(angle) * speed;
+                        p.vy = Math.sin(angle) * speed;
+                        p.life = 20;
+                        p.decay = true;
+                        p.gravity = 0.5;
+                    } else {
+                        p.vx = (Math.random() * 2 - 1);
+                        p.vy = (Math.random() * -2);
+                        p.life = 60;
+                        p.decay = true;
+                        p.gravity = 0;
+                    }
+
+                    spawned++;
+                }
+            }
+        }
+
+        function spawnEnemy() {
+            if (!state.fightMode) return;
+            if (enemies.length > 5 || state.hasEnded) return;
+
+            const el = document.createElement('div');
+            el.className = 'enemy';
+            const inner = document.createElement('div');
+            inner.className = 'enemy-inner';
+            el.appendChild(inner);
+            DOM.stage.appendChild(el);
+
+            const fromRight = Math.random() > 0.5;
+            const startX = fromRight ? DOM.stage.offsetWidth + 50 : -50;
+            const startY = Math.random() * 300 + 50;
+
+            const baseSpeed = 2;
+            const killFactor = Math.floor(state.kills / 5) * 0.5;
+            const enemySpeed = baseSpeed + killFactor;
+
+            enemies.push({
+                el: el,
+                x: startX,
+                y: startY,
+                vx: fromRight ? -enemySpeed : enemySpeed,
+                scale: 1
+            });
+        }
+
+        /* --- GAME LOGIC --- */
+        function handleEnemyDefeated() {
+            state.kills++;
+            DOM.kills.textContent = state.kills;
+
+            if (state.kills % 1 === 0) {
+                forceGrow(10);
+            }
+        }
+
+        function damageHero(amount) {
+            if (state.hasEnded) return;
+
+            state.scale = Math.max(50, parseInt(state.scale) - amount);
+
+            DOM.scaleInput.value = state.scale;
+            DOM.scaleLabel.textContent = state.scale + '%';
+
+            DOM.hero.style.filter = "sepia(1) saturate(5) hue-rotate(-50deg) drop-shadow(0 0 10px red)";
+            setTimeout(() => DOM.hero.style.filter = "", 200);
+
+            triggerShake();
+        }
+
+        function forceGrow(amount) {
+            state.scale = Math.min(200, parseInt(state.scale) + amount);
+
+            DOM.scaleInput.value = state.scale;
+            DOM.scaleLabel.textContent = state.scale + '%';
+
+            spawnParticles(20, 'spark', (state.x / 100) * DOM.stage.offsetWidth, state.y + 100);
+
+            if (state.scale >= 150) {
+                triggerWin();
+            }
+        }
+
+        function triggerWin() {
+            if (state.hasEnded) return;
+            state.hasEnded = true;
+
+            DOM.resultText.textContent = 'YOU WON!';
+            DOM.resultText.classList.remove('loss-text');
+            DOM.resultText.classList.add('win-text');
+            DOM.resultSubtext.textContent = 'MAXIMUM POWER REACHED';
+
+            DOM.resultOverlay.classList.add('active');
+
+            state.isFlying = true;
+            DOM.hero.classList.add('flying-mode');
+            DOM.hero.classList.remove('idle');
+            state.y = 200;
+            state.vx = 0;
+            state.vy = 0;
+        }
+
+        function triggerLoss() {
+            if (state.hasEnded) return;
+            state.hasEnded = true;
+
+            DOM.resultText.textContent = 'GAME OVER';
+            DOM.resultText.classList.remove('win-text');
+            DOM.resultText.classList.add('loss-text');
+            DOM.resultSubtext.textContent = 'LOST ALL POWER';
+
+            DOM.resultOverlay.classList.add('active');
+
+            state.isFlying = false;
+            DOM.hero.classList.remove('flying-mode');
+            DOM.hero.classList.add('idle');
+            state.vy = -10;
+            triggerShake();
+        }
+
+        /* --- PHYSICS --- */
+
+        function updatePhysics(dtFactor) {
+            if (state.hasEnded) {
+                if (state.scale >= 150) {
+                    // VICTORY SPIN PHYSICS
+
+                    const targetX = 50;
+                    const centeringForce = (targetX - state.x) * 0.1;
+                    state.x += centeringForce * dtFactor;
+
+                    const targetY = 200;
+                    const currentPixelY = state.y;
+                    const yCenteringForce = (targetY - currentPixelY) * 0.1;
+                    state.y += yCenteringForce * dtFactor;
+
+                    const rotationIncrement = CFG.VICTORY_ROTATION_RATE * (dtFactor * 16.66 / 1000);
+                    state.victoryRotation += rotationIncrement;
+
+                } else {
+                    // LOSS FALL PHYSICS
+                    state.vy -= CFG.GRAVITY * dtFactor * 2;
+                    state.y += state.vy * dtFactor;
+                    if (state.y <= 0) {
+                        state.y = 0;
+                        state.vy = 0;
+                    }
+                }
+                return;
+            }
+
+            const currentSpeed = (keys.Shift ? CFG.TURBO : CFG.SPEED) * dtFactor;
+
+            // Horizontal Move 
+            if (keys.ArrowRight) {
+                state.vx += state.isFlying ? currentSpeed * 0.4 : currentSpeed * 0.3;
+                state.facingRight = true;
+                if (!state.isFlying && Math.random() > 0.8) spawnParticles(1, 'dust');
+            }
+            if (keys.ArrowLeft) {
+                state.vx -= state.isFlying ? currentSpeed * 0.4 : currentSpeed * 0.3;
+                state.facingRight = false;
+                if (!state.isFlying && Math.random() > 0.8) spawnParticles(1, 'dust');
+            }
+
+            const maxV = keys.Shift ? 15 : 8;
+            state.vx = Math.max(-maxV, Math.min(maxV, state.vx));
+
+
+            // Friction & Position
+            state.vx *= Math.pow(CFG.FRICTION, dtFactor);
+            state.x += (state.vx / 6) * dtFactor;
+
+            // Boundaries
+            if (state.x < 2) {
+                state.x = 2;
+                state.vx = 0;
+            }
+            if (state.x > 98) {
+                state.x = 98;
+                state.vx = 0;
+            }
+
+            // Vertical Physics
+            if (state.isFlying) {
+                if (keys.ArrowUp) state.vy += CFG.FLY_SPEED * 0.2 * dtFactor;
+                if (keys.ArrowDown) state.vy -= CFG.FLY_SPEED * 0.2 * dtFactor;
+                state.vy *= Math.pow(0.9, dtFactor);
+                state.y += state.vy * dtFactor;
+            } else {
+                if (state.y > 0) {
+                    state.vy -= CFG.GRAVITY * dtFactor;
+                    state.y += state.vy * dtFactor;
+                }
+                if (state.y <= 0) {
+                    state.y = 0;
+                    state.vy = 0;
+                }
+            }
+            if (state.y > 380) state.y = 380;
+        }
+
+        function updateEntities(dtFactor) {
+            const stageWidth = DOM.stage.offsetWidth;
+
+            // 1. Enemies
+            const heroX = (state.x / 100) * stageWidth;
+            const scaleFactor = state.scale / 100;
+
+            const heroWidth = 70 * scaleFactor;
+            const heroHeight = 190 * scaleFactor;
+
+            const hL = heroX - (heroWidth / 2);
+            const hR = heroX + (heroWidth / 2);
+            const hB = state.y;
+            const hT = state.y + heroHeight;
+
+            for (let i = enemies.length - 1; i >= 0; i--) {
+                const e = enemies[i];
+                e.x += e.vx * dtFactor;
+                e.y += Math.sin(Date.now() / 200) * 1 * dtFactor;
+
+                e.el.style.transform = `translate3d(${e.x}px, -${e.y + CFG.GROUND_OFFSET}px, 0)`;
+
+                if (e.x < -100 || e.x > stageWidth + 100) {
+                    if (!state.hasEnded) {
+                        e.el.remove();
+                        enemies.splice(i, 1);
+                    }
+                    continue;
+                }
+
+                if (!state.hasEnded) {
+                    const eL = e.x;
+                    const eR = e.x + 40;
+                    const eB = e.y;
+                    const eT = e.y + 40;
+
+                    if (hL < eR && hR > eL && hB < eT && hT > eB) {
+                        damageHero(CFG.SCALE_LOSS_PERCENT);
+                        takeDamage(e.x, e.y);
+
+                        spawnParticles(10, 'dust', e.x, e.y + CFG.GROUND_OFFSET);
+                        e.el.remove();
+                        enemies.splice(i, 1);
+                        continue;
+                    }
+                }
+            }
+
+            // 2. Projectiles
+            for (let i = projectiles.length - 1; i >= 0; i--) {
+                const p = projectiles[i];
+                p.x += p.vx * dtFactor;
+                p.life -= 1 * dtFactor;
+
+                p.el.style.transform = `translate3d(${p.x}px, -${p.y}px, 0)`;
+
+                let destroyed = false;
+
+                // Hit Enemy
+                for (let j = enemies.length - 1; j >= 0; j--) {
+                    const e = enemies[j];
+                    const dx = p.x - e.x;
+                    const dy = p.y - (e.y + CFG.GROUND_OFFSET);
+
+                    if (Math.sqrt(dx * dx + dy * dy) < 40) {
+                        spawnParticles(12, 'spark', e.x, e.y + CFG.GROUND_OFFSET);
+                        addCoin(e.x, e.y);
+                        e.el.remove();
+                        enemies.splice(j, 1);
+                        destroyed = true;
+
+                        handleEnemyDefeated();
+
+                        break;
+                    }
+                }
+
+                if (!destroyed && (p.x > stageWidth || p.x < 0 || p.life <= 0)) {
+                    if (p.life > 0) spawnParticles(5, 'spark', p.x, p.y);
+                    destroyed = true;
+                }
+
+                if (destroyed) {
+                    p.el.remove();
+                    projectiles.splice(i, 1);
+                }
+            }
+
+            // 3. Particles
+            particlePool.forEach(p => {
+                if (p.active) {
+                    p.x += p.vx * dtFactor;
+                    p.y += p.vy * dtFactor;
+                    if (p.gravity) p.vy -= p.gravity * dtFactor;
+                    p.life -= 1 * dtFactor;
+
+                    const yOffset = p.gravity ? 0 : 80;
+                    p.el.style.transform = `translate3d(${p.x}px, -${p.y + yOffset}px, 0) scale(${p.decay ? p.life/20 : 1})`;
+                    p.el.style.opacity = p.decay ? p.life / 20 : 1;
+
+                    if (p.life <= 0) {
+                        p.active = false;
+                        p.el.style.display = 'none';
+                    }
+                }
+            });
+        }
+
+        function renderHero() {
+            const dir = state.facingRight ? 1 : -1;
+            const tilt = state.isFlying ? state.vx * 3 : state.vx * 1.5;
+            const stageWidth = DOM.stage.offsetWidth;
+            const pixelX = (state.x / 100) * stageWidth;
+
+            const rotation = (state.hasEnded && state.scale >= 150 ? state.victoryRotation : tilt) + state.manualRotation;
+
+            const t = `translate3d(${pixelX - 70}px, -${state.y + CFG.GROUND_OFFSET}px, 0) 
+                         scaleX(${dir * state.scale/100}) 
+                         scaleY(${state.scale/100}) 
+                         rotate(${rotation}deg) 
+                         skewX(${state.skewX}deg) 
+                         skewY(${state.skewY}deg)`;
+
+            DOM.hero.style.transform = t;
+
+            // Shadow
+            const shadowOpacity = Math.max(0, 1 - (state.y / 200));
+            DOM.shadow.style.opacity = shadowOpacity;
+            DOM.shadow.style.transform = `translate3d(${pixelX - 40}px, -75px, 0) scale(${shadowOpacity * state.scale/100})`;
+        }
+
+        function gameLoop(timestamp) {
+            if (!lastTime) lastTime = timestamp;
+            const dt = (timestamp - lastTime) / 16.66;
+            lastTime = timestamp;
+            const safeDt = Math.min(dt, 4);
+
+            updatePhysics(safeDt);
+            updateEntities(safeDt);
+            renderHero();
+
+            requestAnimationFrame(gameLoop);
+        }
+
+        /* --- UI HELPERS --- */
+        const partValueMap = {
+            'head': 'headValue',
+            'left-arm': 'leftArmValue',
+            'right-arm': 'rightArmValue'
+        };
+
+        function rotatePart(partId, degrees) {
+            state.rotations[partId] = parseInt(degrees);
+            document.getElementById(partId).style.transform = `rotate(${degrees}deg)`;
+            document.getElementById(partValueMap[partId]).textContent = degrees + '°';
+        }
+
+        function updateTransform() {
+            state.scale = parseInt(DOM.scaleInput.value);
+            state.skewX = document.getElementById('skewX').value;
+            state.skewY = document.getElementById('skewY').value;
+
+            state.manualRotation = parseInt(document.getElementById('rotate').value);
+            document.getElementById('rotateValue').textContent = state.manualRotation + '°';
+
+            DOM.scaleLabel.textContent = state.scale + '%';
+            document.getElementById('skewXValue').textContent = state.skewX + '°';
+            document.getElementById('skewYValue').textContent = state.skewY + '°';
+        }
+
+        function resetGame() {
+            // Reset main state
+            state.x = 50;
+            state.y = 0;
+            state.vx = 0;
+            state.vy = 0;
+            state.isFlying = false;
+            state.fightMode = false;
+            state.health = 3;
+            state.kills = 0;
+            state.scale = 100;
+            state.hasEnded = false;
+            state.victoryRotation = 0;
+
+            // Reset UI displays
+            updateHealthDisplay();
+            DOM.kills.textContent = '0';
+            DOM.resultOverlay.classList.remove('active');
+            DOM.hero.style.filter = "";
+
+            // Reset controls and hero state
+            DOM.scaleInput.value = 100;
+            resetTransform();
+            DOM.hero.classList.remove('flying-mode');
+            DOM.flyBtn.classList.remove('active');
+            DOM.fightBtn.classList.remove('active');
+            DOM.hero.classList.add('idle');
+
+            // Clear entities
+            [...enemies, ...projectiles].forEach(e => e.el.remove());
+            enemies.length = 0;
+            projectiles.length = 0;
+            particlePool.forEach(p => {
+                p.active = false;
+                p.el.style.display = 'none';
+            });
+        }
+
+        function resetTransform() {
+            DOM.scaleInput.value = 100;
+            document.getElementById('skewX').value = 0;
+            document.getElementById('skewY').value = 0;
+            document.getElementById('rotate').value = 0;
+
+            ['head', 'left-arm', 'right-arm'].forEach(p => {
+                document.getElementById(p + 'Rotation').value = 0;
+                rotatePart(p, 0);
+            });
+            updateTransform();
+        }
+
+        // Start
+        init();
+    </script>
+</body>
+
+</html>
